@@ -37,6 +37,8 @@
     "enableTranslation": true,
     "nativeLanguage": "en",
     "languages": ["en", "pl"],
-    "blueprints": []
+    "blueprints": [],
+    "herokuAppName": "jhipster-demo-ciemiorek",
+    "herokuDeployType": "git"
   }
 }

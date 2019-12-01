@@ -51,10 +51,13 @@ public class BlogResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PostMapping("/blogs")
-    public ResponseEntity<Blog> createBlog(@Valid @RequestBody Blog blog) throws URISyntaxException {
+    public ResponseEntity<?> createBlog(@Valid @RequestBody Blog blog) throws URISyntaxException {
         log.debug("REST request to save Blog : {}", blog);
         if (blog.getId() != null) {
             throw new BadRequestAlertException("A new blog cannot already have an ID", ENTITY_NAME, "idexists");
+        }
+        if(!blog.getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse(""))){
+            return new ResponseEntity<>("error.http.403",HttpStatus.FORBIDDEN);
         }
         Blog result = blogRepository.save(blog);
         return ResponseEntity.created(new URI("/api/blogs/" + result.getId()))
@@ -72,12 +75,16 @@ public class BlogResource {
      * @throws URISyntaxException if the Location URI syntax is incorrect.
      */
     @PutMapping("/blogs")
-    public ResponseEntity<Blog> updateBlog(@Valid @RequestBody Blog blog) throws URISyntaxException {
+    public ResponseEntity<?> updateBlog(@Valid @RequestBody Blog blog) throws URISyntaxException {
         log.debug("REST request to update Blog : {}", blog);
         if (blog.getId() == null) {
             throw new BadRequestAlertException("Invalid id", ENTITY_NAME, "idnull");
         }
-        Blog result = blogRepository.save(blog);
+        if (!blog.getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse("")))
+        {
+            return new ResponseEntity<>("error.http.403",HttpStatus.FORBIDDEN);
+        }
+            Blog result = blogRepository.save(blog);
         return ResponseEntity.ok()
             .headers(HeaderUtil.createEntityUpdateAlert(applicationName, true, ENTITY_NAME, blog.getId().toString()))
             .body(result);
@@ -105,6 +112,7 @@ public class BlogResource {
     public ResponseEntity<?> getBlog(@PathVariable Long id) {
         log.debug("REST request to get Blog : {}", id);
         Optional<Blog> blog = blogRepository.findById(id);
+
         if (blog.isPresent() && blog.get().getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse(""))){
             return ResponseUtil.wrapOrNotFound(blog);
 
@@ -120,9 +128,14 @@ public class BlogResource {
      * @return the {@link ResponseEntity} with status {@code 204 (NO_CONTENT)}.
      */
     @DeleteMapping("/blogs/{id}")
-    public ResponseEntity<Void> deleteBlog(@PathVariable Long id) {
+    public ResponseEntity<?> deleteBlog(@PathVariable Long id) {
         log.debug("REST request to delete Blog : {}", id);
-        blogRepository.deleteById(id);
+        Optional<Blog> blog = blogRepository.findById(id);
+        if (blog.isPresent() && !blog.get().getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse("")))
+        {
+            return new ResponseEntity<>("error.http.403",HttpStatus.FORBIDDEN);
+        }
+            blogRepository.deleteById(id);
         return ResponseEntity.noContent().headers(HeaderUtil.createEntityDeletionAlert(applicationName, true, ENTITY_NAME, id.toString())).build();
     }
 }
