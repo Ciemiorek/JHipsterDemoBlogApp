@@ -2,6 +2,7 @@ package com.mycompany.myapp.web.rest;
 
 import com.mycompany.myapp.domain.Entry;
 import com.mycompany.myapp.repository.EntryRepository;
+import com.mycompany.myapp.security.SecurityUtils;
 import com.mycompany.myapp.web.rest.errors.BadRequestAlertException;
 
 import io.github.jhipster.web.util.HeaderUtil;
@@ -16,7 +17,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional; 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -99,11 +100,8 @@ public class EntryResource {
     public ResponseEntity<List<Entry>> getAllEntries(Pageable pageable, @RequestParam(required = false, defaultValue = "false") boolean eagerload) {
         log.debug("REST request to get a page of Entries");
         Page<Entry> page;
-        if (eagerload) {
-            page = entryRepository.findAllWithEagerRelationships(pageable);
-        } else {
-            page = entryRepository.findAll(pageable);
-        }
+        page = entryRepository.findByBlogUserLoginOrderByDateDesc(SecurityUtils.getCurrentUserLogin().orElse(null),pageable);
+
         HttpHeaders headers = PaginationUtil.generatePaginationHttpHeaders(ServletUriComponentsBuilder.fromCurrentRequest(), page);
         return ResponseEntity.ok().headers(headers).body(page.getContent());
     }
@@ -115,9 +113,14 @@ public class EntryResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the entry, or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/entries/{id}")
-    public ResponseEntity<Entry> getEntry(@PathVariable Long id) {
+    public ResponseEntity<?> getEntry(@PathVariable Long id) {
         log.debug("REST request to get Entry : {}", id);
         Optional<Entry> entry = entryRepository.findOneWithEagerRelationships(id);
+        if (entry.isPresent() && !entry.get().getBlog().getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse(""))){
+
+            return new ResponseEntity<>("error.http.403",HttpStatus.FORBIDDEN);
+        }
+
         return ResponseUtil.wrapOrNotFound(entry);
     }
 

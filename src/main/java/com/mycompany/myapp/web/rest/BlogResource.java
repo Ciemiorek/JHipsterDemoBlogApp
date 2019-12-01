@@ -2,6 +2,7 @@ package com.mycompany.myapp.web.rest;
 
 import com.mycompany.myapp.domain.Blog;
 import com.mycompany.myapp.repository.BlogRepository;
+import com.mycompany.myapp.security.SecurityUtils;
 import com.mycompany.myapp.web.rest.errors.BadRequestAlertException;
 
 import io.github.jhipster.web.util.HeaderUtil;
@@ -9,8 +10,9 @@ import io.github.jhipster.web.util.ResponseUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.transaction.annotation.Transactional; 
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -90,7 +92,7 @@ public class BlogResource {
     @GetMapping("/blogs")
     public List<Blog> getAllBlogs() {
         log.debug("REST request to get all Blogs");
-        return blogRepository.findAll();
+        return blogRepository.findByUserIsCurrentUser();
     }
 
     /**
@@ -100,10 +102,15 @@ public class BlogResource {
      * @return the {@link ResponseEntity} with status {@code 200 (OK)} and with body the blog, or with status {@code 404 (Not Found)}.
      */
     @GetMapping("/blogs/{id}")
-    public ResponseEntity<Blog> getBlog(@PathVariable Long id) {
+    public ResponseEntity<?> getBlog(@PathVariable Long id) {
         log.debug("REST request to get Blog : {}", id);
         Optional<Blog> blog = blogRepository.findById(id);
-        return ResponseUtil.wrapOrNotFound(blog);
+        if (blog.isPresent() && blog.get().getUser().getLogin().equals(SecurityUtils.getCurrentUserLogin().orElse(""))){
+            return ResponseUtil.wrapOrNotFound(blog);
+
+        }
+        return new ResponseEntity<>("error.http.403", HttpStatus.FORBIDDEN);
+
     }
 
     /**
