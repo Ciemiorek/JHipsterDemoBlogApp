@@ -1,0 +1,11 @@
+version: '2'
+services:
+  katalogjhipster-postgresql:
+    image: postgres:11.5
+    # volumes:
+    #     - ~/volumes/jhipster/katalogJhipster/postgresql/:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=katalogJhipster
+      - POSTGRES_PASSWORD=
+    ports:
+      - 5432:5432
